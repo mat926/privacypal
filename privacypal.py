@@ -3,16 +3,20 @@ import os
 from patchright.sync_api import sync_playwright
 import time
 from fuzzywuzzy import fuzz
-import logging
+from modules.util import logger
 from data_brokers import DataBroker, WhitepagesDataBroker
+
 # Import additional data brokers here, e.g., from data_brokers.spokeo import SpokeoDataBroker
 
 # Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format='%(asctime)s - %(levelname)s - %(message)s'
+# )
 
+# Set up the main logger
+#logger = util.logger
+#logger = MyLogger('PrivacyPal', 'data_broker_removal.log', logging.INFO)
 
 
 # Main function to run the app
@@ -30,10 +34,11 @@ def main():
 
     # Validate primary personal info
     if not all(personal_info.values()):
-        logging.error("Please set FIRST_NAME, LAST_NAME, and ADDRESS as environment variables.")
+        logger.error("Please set FIRST_NAME, LAST_NAME, and ADDRESS as environment variables.")
         print("Error: Please set FIRST_NAME, LAST_NAME, and ADDRESS as environment variables.")
         return
 
+    logger.info("Starting PrivacyPal Data Broker Removal Process")
     # Create list of all names to search (primary + variations + relatives)
     all_names = [(personal_info['first_name'], personal_info['last_name'])]
     for variation in name_variations:
@@ -68,29 +73,32 @@ def main():
                 'last_name': last_name,
                 'address': personal_info['address']
             }
-            logging.info(f"Processing searches for {first_name} {last_name}")
+            logger.info("Processing searches for %s %s", first_name, last_name)
 
             for data_broker in data_brokers:
+                # Update the databroker field dynamically
+                logger.addFilter(lambda record: setattr(record, 'databroker', data_broker.name) or True)
+
                 try:
                     if data_broker.search(page, current_info):
                         if data_broker.verify_result(page, current_info):
                             print(f"Verified information found on {data_broker.name} for {first_name} {last_name}")
                             data_broker.opt_out(page, current_info)
-                            logging.info(f"Opt-out request submitted for {data_broker.name} - {first_name} {last_name}")
+                            #logger.info(f"Opt-out request submitted for {data_broker.name} - {first_name} {last_name}")
                             print(f"Opt-out request submitted for {data_broker.name} - {first_name} {last_name}")
                         else:
-                            logging.info(f"Results on {data_broker.name} for {first_name} {last_name} did not match closely enough")
+                            #logger.info(f"Results on {data_broker.name} for {first_name} {last_name} did not match closely enough")
                             print(f"Results on {data_broker.name} for {first_name} {last_name} did not match closely enough")
                     else:
-                        logging.info(f"No information found on {data_broker.name} for {first_name} {last_name}")
+                        #logger.info(f"No information found on {data_broker.name} for {first_name} {last_name}")
                         print(f"No information found on {data_broker.name} for {first_name} {last_name}")
                 except Exception as e:
-                    logging.error(f"Error processing {data_broker.name} for {first_name} {last_name}: {e}")
+                    #logger.error(f"Error processing {data_broker.name} for {first_name} {last_name}: {e}")
                     print(f"Error processing {data_broker.name} for {first_name} {last_name}: {e}")
                 time.sleep(2)  # Delay to avoid rate limiting
 
         browser.close()
-        logging.info("Process completed.")
+        logger.info("Process completed.")
         print("Process completed. Check data_broker_removal.log for details.")
 
 if __name__ == "__main__":

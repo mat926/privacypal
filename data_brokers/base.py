@@ -1,6 +1,8 @@
 # data_brokers/base.py
 from fuzzywuzzy import fuzz
-import logging
+from modules import util
+
+logger = util.logger
 
 # Abstract base class for data brokers
 class DataBroker:
@@ -8,6 +10,9 @@ class DataBroker:
         self.name = name
         self.search_url = search_url
         self.opt_out_url = opt_out_url
+
+        # Add a filter to automatically include the databroker field in all log messages
+        #logger.addFilter(lambda record: setattr(record, 'databroker', self.name) or True)
 
     def search(self, page, personal_info):
         """Search for personal info on the data broker's website."""
@@ -32,10 +37,10 @@ class DataBroker:
             address_similarity = fuzz.token_set_ratio(personal_info['address'].lower(), result_address.lower())
 
             # Log the verification details
-            logging.info(f"Verifying {self.name}: Name similarity={name_similarity}, Address similarity={address_similarity}")
+            logger.info(f"Verifying {self.name}: Name similarity={name_similarity}, Address similarity={address_similarity}")
 
             # Consider a match if both name and address have high similarity
             return name_similarity > 90 and address_similarity > 85
         except Exception as e:
-            logging.error(f"Error verifying results for {self.name}: {e}")
+            logger.error(f"Error verifying results for {self.name}: {e}")
             return False
