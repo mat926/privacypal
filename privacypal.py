@@ -1,5 +1,6 @@
 import os
-from playwright.sync_api import sync_playwright
+#from playwright.sync_api import sync_playwright
+from patchright.sync_api import sync_playwright
 import time
 from fuzzywuzzy import fuzz
 import logging
@@ -8,7 +9,6 @@ from data_brokers import DataBroker, WhitepagesDataBroker
 
 # Set up logging
 logging.basicConfig(
-    filename='data_broker_removal.log',
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
@@ -19,9 +19,9 @@ logging.basicConfig(
 def main():
     # Load personal info from environment variables
     personal_info = {
-        'first_name': os.getenv('FIRST_NAME'),
-        'last_name': os.getenv('LAST_NAME'),
-        'address': os.getenv('ADDRESS')
+        'first_name': 'John', # os.getenv('FIRST_NAME'),
+        'last_name': 'Smith', #os.getenv('LAST_NAME'),
+        'address':  '17255 W Via De Luna Dr' # os.getenv('ADDRESS')
     }
 
     # Load name variations and relatives
@@ -53,7 +53,13 @@ def main():
 
     # Start Playwright and process each data broker
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch_persistent_context(
+            user_data_dir="./user_data",
+            channel="chrome",
+            headless=False,
+            no_viewport=True,
+            # do NOT add custom browser headers or user_agent
+        )
         page = browser.new_page()
 
         for first_name, last_name in all_names:
