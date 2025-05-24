@@ -83,9 +83,9 @@ def main():
                 try:
                     search_results = data_broker.search(page, name)
                     if search_results:
-                        if data_broker.verify_results(search_results, name, config.config):
-                            print(f"Verified information found on {data_broker.name} for {f_name} {l_name}")
-                        #     data_broker.opt_out(page, name)
+                        filtered_results = data_broker.verify_results(search_results, name, config.config)
+                        # print(f"Verified information found on {data_broker.name} for {f_name} {l_name}")
+                        data_broker.opt_out(page, filtered_results, name)
                         #     #logger.info(f"Opt-out request submitted for {data_broker.name} - {first_name} {last_name}")
                         #     print(f"Opt-out request submitted for {data_broker.name} - {f_name} {l_name}")
                         # else:

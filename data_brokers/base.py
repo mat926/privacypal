@@ -27,7 +27,7 @@ class DataBroker:
         """Verify if search results match personal info to avoid false positives."""
         logger.info("Verifying search results")
 
-
+        filtered_results = []
 
         for result in search_results:
             # Check if the name in the result matches any name in the config names
@@ -35,11 +35,11 @@ class DataBroker:
             is_address_match = self.check_address_match(result, config)
             # is_email_match = self.check_email_match(search_results, config)
             if is_name_match and is_address_match:
-                logger.info("Result: %s", result)
+                filtered_results.append(result)
+            else:
+                logger.warn("No matches found in search results for %s", name)
 
-
-        logger.info("No matches found in search results")
-        return False
+        return filtered_results
     
     def check_name_match(self, search_result, name):
         """Check if the name in the result matches any name in the config names."""

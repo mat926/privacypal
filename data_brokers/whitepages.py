@@ -137,11 +137,41 @@ class WhitepagesDataBroker(DataBroker):
         return self._parse_search_results(page)
 
 
-    def opt_out(self, page, personal_info):
+    def opt_out(self,page,  results, name):
         """Submit opt-out request on Whitepages."""
-        print(f"Opting out from {self.name} for {personal_info['first_name']} {personal_info['last_name']}")
-        page.goto(self.opt_out_url)
-        page.fill('input[name="name"]', f"{personal_info['first_name']} {personal_info['last_name']}")
-        page.fill('input[name="address"]', personal_info['address'])
-        page.click('button[type="submit"]')
-        time.sleep(5)  # Wait for submission to process
+        # print(f"Opting out from {self.name} for {personal_info['first_name']} {personal_info['last_name']}")
+        
+        for result in results:
+            page.goto(self.opt_out_url)
+            time.sleep(2)
+            page.fill('#suppression-requests-person-url', result['link'])
+            # page.fill('input[name="address"]', personal_info['address'])
+            page.click("button:has-text('Next')")
+            time.sleep(2) 
+            page.click("button:has-text('Remove Me')")
+            #Fill out reason form
+            time.sleep(2) 
+
+            error_element = page.query_selector('[class*="error--text"]')
+            if error_element:
+                logger.warning("Error: %s", error_element.evaluate("el => el.textContent.trim()").replace("\n", "").replace("  ", " ").strip())
+                logger.warning("Skipping this result due to error")
+                continue
+
+            time.sleep(2) 
+            page.select_option("select.select", value="I just want to keep my information private")
+            page.click("button:has-text('Next')")
+            time.sleep(2) 
+
+
+
+            # Enter phone number for verification
+            logger.info("Entering phone number %s for verification", "6024923113")
+            page.fill('#suppression-requests-phone-number', "6024923124")
+            page.check("input.cs-p.checkbox")
+            page.click("button:has-text('Call now')")
+
+            verification_code = page.query_selector("div.display-1.mb-4")
+            logger.warning("Whitepages is going to be caalling %s for verification. Use the code %s", "6024923114")
+
+
