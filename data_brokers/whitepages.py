@@ -38,6 +38,7 @@ class WhitepagesDataBroker(DataBroker):
                 email = ''
                 phone = ''
                 work = ''
+                link = ''
 
                 # Try multiple selectors for each field
                 for name_sel in ["[class*='name-link-text']"]:
@@ -104,12 +105,22 @@ class WhitepagesDataBroker(DataBroker):
                         work = el.evaluate("el => el.textContent.trim()")
                         break
 
+                link = f"https://www.whitepages.com{item.evaluate("el => el.getAttribute('href')")}"
+
 
                 # Avoid duplicates
-                key = (name, tuple(addresses), age, tuple(may_go_by), tuple(related_to), email, phone, work)
-                if key not in seen:
-                    results.append({'name': name, 'addresses': addresses, 'age': age, 'may_go_by': may_go_by, 'related_to': related_to, 'email': email, 'phone': phone, 'work': work})
-                    seen.add(key)
+                # key = (name, tuple(addresses), age, tuple(may_go_by), tuple(related_to), email, phone, work)
+                # if key not in seen:
+                results.append({'name': name, 
+                                'addresses': addresses, 
+                                'age': age, 
+                                'may_go_by': may_go_by, 
+                                'related_to': related_to, 
+                                'email': email, 
+                                'phone': phone, 
+                                'work': work,
+                                'link': link})
+                    # seen.add(key)
             except AttributeError as e:
                 print(f"Error parsing result: {e}")
         logger.info("Parsed %d results", len(results))
@@ -118,9 +129,9 @@ class WhitepagesDataBroker(DataBroker):
     def search(self, page, personal_info):
         """Search for info on Whitepages and return structured results."""
         #print(f"Searching {self.name} for {personal_info['first_name']} {personal_info['last_name']}")
-        logger.info("Searching for %s %s", personal_info['first_name'], personal_info['last_name'])
+        logger.info("Searching for %s %s %s", personal_info['first_name'], personal_info.get('middle_name','') , personal_info['last_name'])
         page.goto(self.search_url)
-        page.fill('#search-address', f"{personal_info['first_name']} {personal_info['last_name']}")
+        page.fill('#search-address', f"{personal_info['first_name']} {personal_info.get('middle_name','')} {personal_info['last_name']}")
         page.click('button[type="submit"]')
         time.sleep(2)  # Wait for results to load
         return self._parse_search_results(page)

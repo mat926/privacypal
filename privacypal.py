@@ -4,6 +4,7 @@ from patchright.sync_api import sync_playwright
 import time
 from fuzzywuzzy import fuzz
 from modules.util import logger
+from modules.config import Config
 from data_brokers import DataBroker, WhitepagesDataBroker
 
 # Import additional data brokers here, e.g., from data_brokers.spokeo import SpokeoDataBroker
@@ -22,33 +23,35 @@ from data_brokers import DataBroker, WhitepagesDataBroker
 # Main function to run the app
 def main():
     # Load personal info from environment variables
-    personal_info = {
-        'first_name': 'John', # os.getenv('FIRST_NAME'),
-        'last_name': 'Smith', #os.getenv('LAST_NAME'),
-        'address':  '17255 W Via De Luna Dr' # os.getenv('ADDRESS')
-    }
+    # personal_info = {
+    #     'first_name': 'John', # os.getenv('FIRST_NAME'),
+    #     'last_name': 'Smith', #os.getenv('LAST_NAME'),
+    #     'address':  '17255 W Via De Luna Dr' # os.getenv('ADDRESS')
+    # }
 
-    # Load name variations and relatives
-    name_variations = os.getenv('NAME_VARIATIONS', '').split(', ')
-    relatives = os.getenv('RELATIVES', '').split(', ')
+    # # Load name variations and relatives
+    # name_variations = os.getenv('NAME_VARIATIONS', '').split(', ')
+    # relatives = os.getenv('RELATIVES', '').split(', ')
 
-    # Validate primary personal info
-    if not all(personal_info.values()):
-        logger.error("Please set FIRST_NAME, LAST_NAME, and ADDRESS as environment variables.")
-        print("Error: Please set FIRST_NAME, LAST_NAME, and ADDRESS as environment variables.")
+    # # Validate primary personal info
+    # if not all(personal_info.values()):
+    #     logger.error("Please set FIRST_NAME, LAST_NAME, and ADDRESS as environment variables.")
+    #     print("Error: Please set FIRST_NAME, LAST_NAME, and ADDRESS as environment variables.")
+    #     return
+
+    try:
+        # Load configuration from YAML file
+        config = Config()
+    except Exception as e:
+        logger.error(f"Error loading config file: {e}")
+        print(f"Error loading config file: {e}")
         return
 
     logger.info("Starting PrivacyPal Data Broker Removal Process")
     # Create list of all names to search (primary + variations + relatives)
-    all_names = [(personal_info['first_name'], personal_info['last_name'])]
-    for variation in name_variations:
-        if variation.strip():
-            first, last = variation.strip().split(' ', 1)
-            all_names.append((first, last))
-    for relative in relatives:
-        if relative.strip():
-            first, last = relative.strip().split(' ', 1)
-            all_names.append((first, last))
+    all_names = config.config['names']
+    
+    
 
     # List of data brokers
     data_brokers = [
@@ -67,34 +70,33 @@ def main():
         )
         page = browser.new_page()
 
-        for first_name, last_name in all_names:
-            current_info = {
-                'first_name': first_name,
-                'last_name': last_name,
-                'address': personal_info['address']
-            }
-            logger.info("Processing searches for %s %s", first_name, last_name)
+        for name in all_names:
+            f_name = name['first_name']
+            m_name = name.get('middle_name', '')
+            l_name = name['last_name']
+            logger.info("Processing searches for %s %s %s", f_name, m_name , l_name)
 
             for data_broker in data_brokers:
                 # Update the databroker field dynamically
-                logger.addFilter(lambda record: setattr(record, 'databroker', data_broker.name) or True)
+                #logger.addFilter(lambda record: setattr(record, 'databroker', data_broker.name) or True)
 
                 try:
-                    if data_broker.search(page, current_info):
-                        if data_broker.verify_result(page, current_info):
-                            print(f"Verified information found on {data_broker.name} for {first_name} {last_name}")
-                            data_broker.opt_out(page, current_info)
-                            #logger.info(f"Opt-out request submitted for {data_broker.name} - {first_name} {last_name}")
-                            print(f"Opt-out request submitted for {data_broker.name} - {first_name} {last_name}")
-                        else:
-                            #logger.info(f"Results on {data_broker.name} for {first_name} {last_name} did not match closely enough")
-                            print(f"Results on {data_broker.name} for {first_name} {last_name} did not match closely enough")
+                    search_results = data_broker.search(page, name)
+                    if search_results:
+                        if data_broker.verify_results(search_results, name, config.config):
+                            print(f"Verified information found on {data_broker.name} for {f_name} {l_name}")
+                        #     data_broker.opt_out(page, name)
+                        #     #logger.info(f"Opt-out request submitted for {data_broker.name} - {first_name} {last_name}")
+                        #     print(f"Opt-out request submitted for {data_broker.name} - {f_name} {l_name}")
+                        # else:
+                        #     #logger.info(f"Results on {data_broker.name} for {first_name} {last_name} did not match closely enough")
+                        #     print(f"Results on {data_broker.name} for {f_name} {l_name} did not match closely enough")
                     else:
                         #logger.info(f"No information found on {data_broker.name} for {first_name} {last_name}")
-                        print(f"No information found on {data_broker.name} for {first_name} {last_name}")
+                        print(f"No information found on {data_broker.name} for {f_name} {l_name}")
                 except Exception as e:
                     #logger.error(f"Error processing {data_broker.name} for {first_name} {last_name}: {e}")
-                    print(f"Error processing {data_broker.name} for {first_name} {last_name}: {e}")
+                    print(f"Error processing {data_broker.name} for {f_name} {l_name}: {e}")
                 time.sleep(2)  # Delay to avoid rate limiting
 
         browser.close()

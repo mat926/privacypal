@@ -1,0 +1,22 @@
+# Configuration file for PrivacyPal
+# Add names, addresses, and emails to search for
+
+names:
+  - first_name: John
+    last_name: Doe
+  - first_name: Jane
+    last_name: Smith
+
+addresses:
+  - street: "123 Main St"
+    city: "Springfield"
+    state: "IL"
+    zip: "62701"
+  - street: "456 Elm St"
+    city: "Metropolis"
+    state: "NY"
+    zip: "10001"
+
+emails:
+  - "john.doe@example.com"
+  - "jane.smith@example.com"
